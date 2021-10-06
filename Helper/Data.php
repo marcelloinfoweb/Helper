@@ -17,14 +17,19 @@ class Data extends AbstractHelper
      */
     protected Curl $curl;
 
+    protected $_logger;
+
     /**
      * @param \Magento\Framework\App\Helper\Context $context
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\HTTP\Client\Curl $curl
      */
     public function __construct(
         \Magento\Framework\App\Helper\Context $context,
+        \Psr\Log\LoggerInterface $logger,
         Curl $curl
     ) {
+        $this->_logger = $logger;
         parent::__construct($context);
         $this->curl = $curl;
     }
@@ -45,8 +50,7 @@ class Data extends AbstractHelper
             return json_decode($this->curl->getBody(), true, 512, JSON_THROW_ON_ERROR);
 
         } catch (\Exception $e) {
-            var_dump($e);
-            die();
+            $this->_logger->critical($e);
         }
     }
 
@@ -59,7 +63,8 @@ class Data extends AbstractHelper
     }
 
     /**
-     * @throws \Safe\Exceptions\JsonException
+     * @param $cpf
+     * @return mixed|void
      */
     public function getIntegratorRmClienteFornecedor($cpf)
     {
@@ -68,21 +73,31 @@ class Data extends AbstractHelper
 
         $username = 'mestre';
         $password = 'cacg93d7';
+        $this->_logger->info($URL);
 
-        //set curl options
-        $this->curl->setOption(CURLOPT_USERPWD, $username . ":" . $password);
-        $this->curl->setOption(CURLOPT_HEADER, 0);
-        $this->curl->setOption(CURLOPT_TIMEOUT, 60);
-        $this->curl->setOption(CURLOPT_RETURNTRANSFER, true);
-        $this->curl->setOption(CURLOPT_CUSTOMREQUEST, 'GET');
+        try {
+            //set curl options
+            $this->curl->setOption(CURLOPT_USERPWD, $username . ":" . $password);
+            $this->curl->setOption(CURLOPT_HEADER, 0);
+            $this->curl->setOption(CURLOPT_TIMEOUT, 60);
+            $this->curl->setOption(CURLOPT_RETURNTRANSFER, true);
+            $this->curl->setOption(CURLOPT_CUSTOMREQUEST, 'GET');
 
-        //get request with url
-        $this->curl->get($URL);
+            //get request with url
+            $this->curl->get($URL);
 
-        //read response
-        $response = $this->curl->getBody();
-        $resp = \Safe\json_decode($response, true);
-        return $resp['items'][0]['FUNCIONARIOATIVO'];
+            //read response
+            $response = $this->curl->getBody();
+            $resp = \Safe\json_decode($response, true);
+
+            if (empty($resp['items'])) {
+                return false;
+            }
+
+            return $resp['items'][0]['FUNCIONARIOATIVO'];
+
+        } catch (\Exception $e) {
+            $this->_logger->critical($e);
+        }
     }
-
 }
