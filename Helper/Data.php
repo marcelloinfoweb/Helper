@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Funarbe\Helper\Helper;
 
 use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\HTTP\Client\Curl;
 
 class Data extends AbstractHelper
@@ -18,17 +19,21 @@ class Data extends AbstractHelper
     protected Curl $curl;
 
     protected $_logger;
+    private $connection;
 
     /**
+     * @param \Magento\Framework\App\ResourceConnection $resourceConnection
      * @param \Magento\Framework\App\Helper\Context $context
      * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\HTTP\Client\Curl $curl
      */
     public function __construct(
+        ResourceConnection $resourceConnection,
         \Magento\Framework\App\Helper\Context $context,
         \Psr\Log\LoggerInterface $logger,
         Curl $curl
     ) {
+        $this->connection = $resourceConnection->getConnection();
         $this->_logger = $logger;
         parent::__construct($context);
         $this->curl = $curl;
@@ -99,5 +104,18 @@ class Data extends AbstractHelper
         } catch (\Exception $e) {
             $this->_logger->critical($e);
         }
+    }
+
+    /**
+     * @param $customerId
+     * @return string
+     */
+    public function getColaborador($customerId): string
+    {
+        $customer_entity = $this->connection->getTableName('customer_entity');
+        $query = $this->connection->select()->from([$customer_entity], ['colaborador'])->where('entity_id=?', $customerId);
+        $result = $this->connection->fetchAll($query);
+
+        return implode(", ", $result[0]);
     }
 }
